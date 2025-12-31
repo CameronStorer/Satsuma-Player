@@ -1,7 +1,7 @@
 // import required libraries
 import 'package:flutter/material.dart';
 import 'package:satsuma_player/database/app_database.dart';
-import '../app_logic/media_management.dart';
+import '../app_logic/media_handler.dart';
 import 'package:path/path.dart' as path; // file path recognition
 import 'dart:io'; // input/output
 import '../database/repositories/song_repository.dart';

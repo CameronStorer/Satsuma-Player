@@ -1,6 +1,6 @@
 // import appropriate libraries
 import 'package:flutter/material.dart';
-import 'package:satsuma_player/app_logic/media_management.dart';
+import 'package:satsuma_player/app_logic/media_handler.dart';
 import 'tabs/playlists_tab.dart';
 import 'tabs/songs_tab.dart';
 import 'tabs/download_tab.dart';

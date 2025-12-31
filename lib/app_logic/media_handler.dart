@@ -12,7 +12,7 @@ import '../database/app_database.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 
-// function to get and return the directory holding music files
+// Retrieve music file directory
 Future<Directory> getMediaDir() async {
   Directory mediaDir;
 
@@ -47,22 +47,34 @@ Future<Directory> getMediaDir() async {
   return mediaDir;
 }
 
-// class for managing songplay
+// android specific issue
+Future<bool> requestStoragePermission() async {
+  var status = await Permission.storage.status;
+  if (!status.isGranted) {
+    status = await Permission.storage.request();
+  }
+  return status.isGranted;
+}
+
+// AudioManager class
 class AudioManager {
   // constructor
   AudioManager(){
     initialize();
+    requestStoragePermission();
   }
 
-  // initialize the database classes
+  // initialize a database object
   static final repo = SongRepository(AppDatabase());
-
   // class variable holding the currently playing song
   static Song? current_song;
-  static bool looping = false;
+  static int looping = 0;  // 0 = false, 1 = yes general, 2 = yes single
+  static bool shuffle = false; // shuffle attribute
   static final AudioPlayer audioPlayer = AudioPlayer();
   bool hasStartedPlaying = false;
   bool currentlyPlaying = false;
+  // list holding compatible file extensions
+  static const allowedExtensions = ['.mp3', '.wav', '.ogg', '.m4a', '.flac', '.acc', '.vorbis', '.alac'];
 
   // ensure that the AudioManager can initialize itself and keep track of music
   void initialize() {
@@ -84,14 +96,6 @@ class AudioManager {
     // });
   }
 
-  // android specific issue
-  static Future<bool> requestStoragePermission() async {
-    var status = await Permission.storage.status;
-    if (!status.isGranted) {
-      status = await Permission.storage.request();
-    }
-    return status.isGranted;
-  }
 
 
   // function to return a list of all media files detected by the app
@@ -107,7 +111,6 @@ class AudioManager {
     // set var dir = media directory
     final dir = await getMediaDir();
     // allowed extension types
-    const allowedExtensions = ['.mp3', '.wav', '.ogg', '.m4a'];
     int counter = 0;
 
     // Recursively list everything
@@ -135,9 +138,8 @@ class AudioManager {
     final song_path = song.path;
     if (song_path == Null) return;
     final ext = path.extension(song_path).toLowerCase();
-    if (ext == '.mp3' || ext == '.wav' || ext == '.m4a') {
+    if (allowedExtensions.contains(ext)) {
       try {
-        
         await audioPlayer.setFilePath(song_path);
         await audioPlayer.play();
         current_song = song;
@@ -167,7 +169,7 @@ class AudioManager {
         final nextSong = await repo.getSongById(song.id + 1);
         if (nextSong == null) {
           // reloop if that setting is turned on
-          if (looping == true) {
+          if (looping == 1) {
             final restartSong = await repo.getSongById(1);
             if (restartSong == null) {
               return;
@@ -176,10 +178,12 @@ class AudioManager {
               return;
             }
           }
-        } else {
+        } else if (looping == 0){ // if no looping active
           playMedia(nextSong);
-          print("FORWARD");
+        } else { // single loop on
+          playMedia(song);
         }
+        print("FORWARD");
       // REWIND
       case "rewind":
         final song = current_song;
@@ -188,7 +192,7 @@ class AudioManager {
         // if at top of list
         if (prevSong == null) {
           // reloop if that setting is turned on
-          if (looping == true) {
+          if (looping == 1) {
             // go back to the last song
             List<Song> allSongs = await repo.getAllSongs();
             int totalSongs = allSongs.length;
@@ -199,18 +203,23 @@ class AudioManager {
             }
             return;
           }
-        } else {
+        } else if (looping == 0){ // if looping inactive
           playMedia(prevSong);
-          print("REVERSE");
+        } else {
+          playMedia(song);
         }
+        print("REVERSE");
       // LOOP
       case "loop":
-        if (looping == false) {
-          looping = true;
-          print("LOOPING = TRUE");
+        if (looping == 0) {
+          looping = 1;
+          print("LOOPING = GENERAL");
+        } else if (looping == 1) {
+          looping = 2;
+          print("LOOPING = SINGLE");
         } else {
-          looping = false;
-          print("LOOPING FALSE");
+          looping = 0;
+          print("LOOPING = FALSE");
         }
     }
   }
