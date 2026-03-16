@@ -20,11 +20,11 @@ class Songs extends Table {
   TextColumn get filename => text().nullable()();
   TextColumn get title => text().withDefault(const Constant('Unknown Title'))();
   IntColumn get artistId => integer().nullable().withDefault(const Constant(1))
-                            .references(Artists, #id, onDelete: KeyAction.cascade)();
+                            .references(Artists, #id, onDelete: KeyAction.setNull)();
   IntColumn get genreId => integer().nullable().withDefault(const Constant(1))
-                            .references(Genres, #id, onDelete: KeyAction.cascade)();
+                            .references(Genres, #id, onDelete: KeyAction.setNull)();
   IntColumn get albumId => integer().nullable().withDefault(const Constant(1))
-                            .references(Albums, #id, onDelete: KeyAction.cascade)();
+                            .references(Albums, #id, onDelete: KeyAction.setNull)();
   IntColumn get durationMS => integer().withDefault(const Constant(0))();
   BoolColumn get favorite => boolean().withDefault(const Constant(false))();
   DateTimeColumn get addedAt => dateTime().withDefault(currentDateAndTime)();
@@ -56,7 +56,7 @@ class Artists extends Table {
   // id
   IntColumn get id => integer().autoIncrement()();
   // Link to the Song
-  TextColumn get title => text().withDefault(const Constant('Unknown Artist'))();
+  TextColumn get title => text().unique().withDefault(const Constant('Unknown Artist'))();
 }
 
 // Genres Table
@@ -64,7 +64,7 @@ class Genres extends Table {
   // id
   IntColumn get id => integer().autoIncrement()();
   // Link to the Song
-  TextColumn get title => text().withDefault(const Constant('Misc'))();
+  TextColumn get title => text().unique().withDefault(const Constant('Misc'))();
 }
 
 // Albums Table
@@ -72,7 +72,7 @@ class Albums extends Table {
   // id
   IntColumn get id => integer().autoIncrement()();
   // Link to the Song
-  TextColumn get title => text().withDefault(const Constant('Unknown Album'))();
+  TextColumn get title => text().unique().withDefault(const Constant('Unknown Album'))();
 }
 
 // Define the Music db. Constructor opens database upon Music object initialization.
@@ -103,35 +103,12 @@ MigrationStrategy get migration {
       await into(genres).insertOnConflictUpdate(
         GenresCompanion.insert(
           id: const Value(1),
-          title: const Value('Unknown Genre'),
+          title: const Value('Misc'),
         ),
       );
     },
   );
 }
-
-  // // don't allow empty artist
-  // @override
-  // MigrationStrategy get migration {
-  //   return MigrationStrategy(
-  //     onCreate: (m) async {
-  //       await m.createAll();
-  //     },
-  //     beforeOpen: (details) async {
-  //       // create triggers
-  //       await customStatement('''
-  //         -- artist trigger
-  //         create trigger if not exists set_default_artist
-  //         before insert on songs
-  //         for each row
-  //         when new.artist_id is null
-  //         begin
-  //           update songs set artist_id = 1 where id = new.id;
-  //         end; 
-  //       ''');
-  //     },
-  //   );
-  // }
 
   @override
   int get schemaVersion => 1;

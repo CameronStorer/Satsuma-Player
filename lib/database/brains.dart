@@ -53,21 +53,20 @@ Future<bool> songExists(String path) async {
   final query = db.select(db.songs)..where((tbl) => tbl.path.equals(path));
   return (await query.get()).isNotEmpty;
 }
-// LOGIC FOR PERFORMING A FULL RESCAN
-Future<void> rescanLibrary(List<SongsCompanion> newSongs) async {
-  await db.batch((batch) {
-    // 1. Delete everything
-    batch.deleteAll(db.songs);
-    // 2. Insert the new batch
-    batch.insertAll(db.songs, newSongs);
-  });
-}
+// // LOGIC FOR PERFORMING A FULL RESCAN
+// Future<void> rescanLibrary(List<SongsCompanion> newSongs) async {
+//   await db.batch((batch) {
+//     // 1. Delete everything
+//     batch.deleteAll(db.songs);
+//     // 2. Insert the new batch
+//     batch.insertAll(db.songs, newSongs);
+//   });
+// }
 
 // Use a Stream for the UI so the music list is always "Live"
 Stream<List<Song>> watchAllSongs() => db.select(db.songs).watch();
 // KEEP A ONE-TIME 'GET' FOR BACKGROUND LOGIC/PROCESSING
 Future<List<Song>> getAllSongs() => db.select(db.songs).get();
-
 
 // SORT THE SONGS TABLE BY ATTRIBUTE (GENERIC SORTING FUNCTION)
 Future<List<Song>> sortSongs(Expression<Object> Function(Songs) sorter, {bool descending = false}) {

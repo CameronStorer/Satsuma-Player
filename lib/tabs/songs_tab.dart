@@ -55,7 +55,7 @@ class _SongsTabState extends State<SongsTab> {
                       // padding: const EdgeInsets.symmetric(horizontal: 2),
                       children: [
                         TextButton(
-                          onPressed: () {rescanLibrary();},
+                          onPressed: () {},
                           child: Column(children: [Icon(Icons.scanner), Text('Rescan')]),
                         ),
                         TextButton(
@@ -114,38 +114,6 @@ class _SongsTabState extends State<SongsTab> {
                 );
               },
             )
-
-
-
-            // body: FutureBuilder<List<Songs>>(
-            //   future: AudioManager.scanForMedia(),
-            //   builder: (context, snapshot) {
-            //     if (snapshot.connectionState == ConnectionState.waiting) {
-            //       return const Center(child: CircularProgressIndicator());
-            //     }
-            //     if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            //       return const Center(child: Text("No media found."));
-            //     }
-
-            //     final songs = snapshot.data!;
-
-            //     return ListView.builder(
-            //       itemCount: songs.length,
-            //       itemBuilder: (context, index) {
-            //         final song = songs[index];
-            //         // final filename = file.path.split('/').last;
-
-            //         return ListTile(
-            //           leading: const Icon(Icons.music_note),
-            //           title: Text(path.basename(song.path.toString())),
-            //           onTap: () {
-            //             AudioManager.playMedia(song);
-            //           },
-            //         );
-            //       },
-            //     );
-            //   },
-            // ),
           ),
         ),
       ),

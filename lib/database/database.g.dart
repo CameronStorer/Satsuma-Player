@@ -23,6 +23,7 @@ class $ArtistsTable extends Artists with TableInfo<$ArtistsTable, Artist> {
       'title', aliasedName, false,
       type: DriftSqlType.string,
       requiredDuringInsert: false,
+      defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
       defaultValue: const Constant('Unknown Artist'));
   @override
   List<GeneratedColumn> get $columns => [id, title];
@@ -199,6 +200,7 @@ class $GenresTable extends Genres with TableInfo<$GenresTable, Genre> {
       'title', aliasedName, false,
       type: DriftSqlType.string,
       requiredDuringInsert: false,
+      defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
       defaultValue: const Constant('Misc'));
   @override
   List<GeneratedColumn> get $columns => [id, title];
@@ -375,6 +377,7 @@ class $AlbumsTable extends Albums with TableInfo<$AlbumsTable, Album> {
       'title', aliasedName, false,
       type: DriftSqlType.string,
       requiredDuringInsert: false,
+      defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
       defaultValue: const Constant('Unknown Album'));
   @override
   List<GeneratedColumn> get $columns => [id, title];
@@ -573,7 +576,7 @@ class $SongsTable extends Songs with TableInfo<$SongsTable, Song> {
       type: DriftSqlType.int,
       requiredDuringInsert: false,
       defaultConstraints: GeneratedColumn.constraintIsAlways(
-          'REFERENCES artists (id) ON DELETE CASCADE'),
+          'REFERENCES artists (id) ON DELETE SET NULL'),
       defaultValue: const Constant(1));
   static const VerificationMeta _genreIdMeta =
       const VerificationMeta('genreId');
@@ -583,7 +586,7 @@ class $SongsTable extends Songs with TableInfo<$SongsTable, Song> {
       type: DriftSqlType.int,
       requiredDuringInsert: false,
       defaultConstraints: GeneratedColumn.constraintIsAlways(
-          'REFERENCES genres (id) ON DELETE CASCADE'),
+          'REFERENCES genres (id) ON DELETE SET NULL'),
       defaultValue: const Constant(1));
   static const VerificationMeta _albumIdMeta =
       const VerificationMeta('albumId');
@@ -593,7 +596,7 @@ class $SongsTable extends Songs with TableInfo<$SongsTable, Song> {
       type: DriftSqlType.int,
       requiredDuringInsert: false,
       defaultConstraints: GeneratedColumn.constraintIsAlways(
-          'REFERENCES albums (id) ON DELETE CASCADE'),
+          'REFERENCES albums (id) ON DELETE SET NULL'),
       defaultValue: const Constant(1));
   static const VerificationMeta _durationMSMeta =
       const VerificationMeta('durationMS');
@@ -1603,21 +1606,21 @@ abstract class _$Music extends GeneratedDatabase {
             on: TableUpdateQuery.onTableName('artists',
                 limitUpdateKind: UpdateKind.delete),
             result: [
-              TableUpdate('songs', kind: UpdateKind.delete),
+              TableUpdate('songs', kind: UpdateKind.update),
             ],
           ),
           WritePropagation(
             on: TableUpdateQuery.onTableName('genres',
                 limitUpdateKind: UpdateKind.delete),
             result: [
-              TableUpdate('songs', kind: UpdateKind.delete),
+              TableUpdate('songs', kind: UpdateKind.update),
             ],
           ),
           WritePropagation(
             on: TableUpdateQuery.onTableName('albums',
                 limitUpdateKind: UpdateKind.delete),
             result: [
-              TableUpdate('songs', kind: UpdateKind.delete),
+              TableUpdate('songs', kind: UpdateKind.update),
             ],
           ),
           WritePropagation(

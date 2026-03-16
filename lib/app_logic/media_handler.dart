@@ -64,6 +64,7 @@ Future<bool> requestStoragePermission() async {
   }
   return false;
 }
+
 //////// CONVERT FILEPATHS INTO SONG COMPANION TYPES //////////////
 Future<SongsCompanion> fileToCompanion(File file) async {
   // read the metadata
