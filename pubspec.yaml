@@ -1,26 +1,36 @@
 name: satsuma_player
-description: "A modernized music playing app."
+description: "A modernized multi-platform music player app."
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.10.0
+  sdk: '>=3.0.0 <4.0.0'
 
+# all application dependencies
 dependencies:
   flutter:
     sdk: flutter
 
   # custom imports
-  path: any
+  # FILE PATH IMPORTS
+  path: ^1.9.0                # library for handling file paths
   path_provider: any
-  drift: any
-  drift_flutter: any
-  on_audio_query: ^2.9.0
+  permission_handler: any     # permission handler for ios and android
+  media_scanner: any          # library for scanning in local music
+
+  # DATABASE RELATED IMPORTS
+  drift: ^2.16.0              # dart database library
+  sqlite3: ^2.1.0             # necessary SQL backend
+  drift_flutter: any          # drift db communication with flutter?
+
+  # AUDIO PLAYING RELATED IMPORTS
   just_audio: any
   just_audio_windows: any
-  media_scanner: any
-  permission_handler: any
+  on_audio_query: ^2.9.0
+  metadata_god: any
+
+  # SERVER SYNC / DOWNLOAD IMPORTS
   youtube_explode_dart: any
   # video_player: any
   # flutter_launcher_icons: ^0.14.4
@@ -28,63 +38,47 @@ dependencies:
   # firebase_auth: ^6.1.2
   # cloud_firestore: ^6.1.0
 
-  # The following adds the Cupertino Icons font to your application.
-  # Use with the CupertinoIcons class for iOS style icons.
+  # IOS-STYLE CUPTERTINO ICONS
   cupertino_icons: ^1.0.8
 
-# program icon config
-flutter_launcher_icons:
-  # REQUIRED: The path to your icon file
-  image_path: "assets/images/mobile_icon.png"
-  
-  # OPTIONAL: Set to true if you want the icon applied to iOS
-  ios: true
-  
-  # OPTIONAL: Set to true if you want the icon applied to Android
-  android: true 
-
-  # COMMAND: flutter pub run flutter_launcher_icons:main
-
-  # ios doesn't like transparent bg's
-  # remove_alpha_ios: true
-  
-  # OPTIONAL (Android Only): Changes the adaptive icon foreground/background.
-  # This is needed for modern Android devices.
-  adaptive_icon_background: "#FFFFFF" # Use a color hex code
-  adaptive_icon_foreground: "assets/images/mobile_icon.png" 
-  
-  # OPTIONAL: If you want to replace the default web icon
-  # web: 
-  #   generate: true
-  #   image_path: "assets/images/app_icon.png"
-    # background_color: "#hexcode" # Optional
-
+# dev dependencies
 dev_dependencies:
   flutter_test:
     sdk: flutter
-
   flutter_launcher_icons: any
   drift_dev: any
   build_runner: any
-
-  # The "flutter_lints" package below contains a set of recommended lints to
-  # encourage good coding practices. The lint set provided by the package is
-  # activated in the `analysis_options.yaml` file located at the root of your
-  # package. See that file for information about deactivating specific lint
-  # rules and activating additional ones.
+  # The "flutter_lints" package below contains a set of recommended lints
   flutter_lints: ^6.0.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
-
+# program icon config
+flutter_launcher_icons:
+  # REQUIRED: The path to your icon file
+  image_path: "assets/images/mobile_icon.png"
+  # OPTIONAL: Set to true if you want the icon applied to iOS
+  ios: true
+  # OPTIONAL: Set to true if you want the icon applied to Android
+  android: true 
+  # COMMAND: flutter pub run flutter_launcher_icons:main
+  # ios doesn't like transparent bg's
+  # remove_alpha_ios: true
+  # OPTIONAL (Android Only): Changes the adaptive icon foreground/background.
+  # This is needed for modern Android devices.
+  adaptive_icon_background: "#FFFFFF" # Use a color hex code
+  adaptive_icon_foreground: "assets/images/mobile_icon.png" 
+  
+  # web: 
+  #   generate: true
+  #   image_path: "assets/images/app_icon.png"
+    # background_color: "#hexcode" # Optional
 
 # The following section is specific to Flutter packages.
 flutter:
 
-  # The following line ensures that the Material Icons font is
-  # included with your application, so that you can use the icons in
-  # the material Icons class.
+  # The following line ensures that the Material Icons font is included
   uses-material-design: true
 
   # To add assets to your application, add an assets section, like this:

@@ -1,21 +1,22 @@
 // File to handle the scanning and management of media
-
-// import appropriate packages
-import 'dart:ffi';
+// IMPORT APPROPRIATE PACKAGES
 import 'dart:io';
+////////// FILE SYSTEM IMPORTS
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
-import 'package:just_audio/just_audio.dart'; // audio handling
-import 'package:media_scanner/media_scanner.dart'; // for scanning media
-import '../database/repositories/song_repository.dart';
-import '../database/app_database.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:media_scanner/media_scanner.dart'; // for scanning media
+import 'package:metadata_god/metadata_god.dart';   // for finding song meta data
+import 'package:drift/drift.dart';
+////////// DATABASE IMPORTS
+import 'package:satsuma_player/database/database.dart';
+import 'package:satsuma_player/database/brains.dart';
+////////// AUDIO PLAYBACK IMPORT
+import 'package:just_audio/just_audio.dart'; // audio handling
 
-
-// Retrieve music file directory
+////////// RETRIEVE MUSIC FILE DIRECTORY //////////////////////
 Future<Directory> getMediaDir() async {
   Directory mediaDir;
-
   if (Platform.isWindows) {
     // Windows: put it in the user's Music folder
     final musicDir = Directory(path.join(Platform.environment['USERPROFILE']!, 'Music', 'Satsuma Player'));
@@ -47,35 +48,41 @@ Future<Directory> getMediaDir() async {
   return mediaDir;
 }
 
-// android specific issue
+////////// ANDROID PERMISSION REQUEST /////////////////////////
 Future<bool> requestStoragePermission() async {
-  var status = await Permission.storage.status;
-  if (!status.isGranted) {
-    status = await Permission.storage.request();
+  // if on android
+  if (Platform.isAndroid) {
+    // get storage status
+    var status = await Permission.storage.status;
+    // if not given permission, request it
+    if (!status.isGranted) {
+      status = await Permission.storage.request();
+    }
+    // return permission status
+    if (!status.isGranted){ print("Storage permissions denied...");}
+    return status.isGranted;
   }
-  return status.isGranted;
+  return false;
 }
 
-// AudioManager class
+////////// AUDIOMANAGER CLASS /////////////////////////////////
 class AudioManager {
-  // constructor
+  // CONSTRUCTOR
   AudioManager(){
     initialize();
     requestStoragePermission();
+    scanForMedia();
   }
 
-  // initialize a database object
-  static final repo = SongRepository(AppDatabase());
+////////// CLASS/INSTANCE VARIABLES ///////////////////////////
   // class variable holding the currently playing song
-  static Song? current_song;
+  static Song? currentSong;
   static int looping = 0;  // 0 = false, 1 = yes general, 2 = yes single
   static bool shuffle = false; // shuffle attribute
   static final AudioPlayer audioPlayer = AudioPlayer();
   // list holding compatible file extensions
   static const allowedExtensions = ['.mp3', '.wav', '.ogg', '.m4a', '.flac', '.acc', '.vorbis', '.alac'];
   static bool _isManualSelection = false;
-  // bool hasStartedPlaying = false;
-  // bool currentlyPlaying = false;
 
   // ensure that the AudioManager can initialize itself and keep track of music
   void initialize() {
@@ -94,52 +101,108 @@ class AudioManager {
     });
   }
 
-  // function to return a list of all media files detected by the app after scanned
-  static Future<List<Song>> scanForMedia() async {
-    // first scan files from android storage if allowed
-    if (Platform.isAndroid) {
-      if (!await requestStoragePermission()) {
-        print("Storage permission denied");
-      }
-      await MediaScanner.loadMedia(path: "/storage/emulated/0/Music/Satsuma Player");
-    }
+//////// CONVERT FILEPATHS INTO SONG COMPANION TYPES //////////////
+Future<SongsCompanion> fileToCompanion(File file) async {
+  // read the tags
+  final metadata = await MetadataGod.readMetadata(file.path);
 
+  // add artist to artist table if not already present
+  if (metadata.artist != null && getByTitle(db.artists, metadata.artist!) == null){
+      insert(db.artists, ArtistsCompanion(title:Value(metadata.artist!)));
+  }
+  // add genre to genre table if not already present
+  if (metadata.genre != null && getByTitle(db.genres, metadata.genre!) == null){
+      insert(db.genres, GenresCompanion(title:Value(metadata.genre!)));
+  }
+  // add album to album table if not already present
+  if (metadata.album != null && getByTitle(db.albums, metadata.album!) == null){
+      insert(db.albums, AlbumsCompanion(title:Value(metadata.album!)));
+  }
+
+  Artist? getArtistId = await getByTitle(db.artists, metadata.artist!);
+  Genre? getGenreId = await getByTitle(db.genres, metadata.genre!);
+  Album? getAlbumId = await getByTitle(db.albums, metadata.album!);
+
+  
+
+  // map metadata to drift columns
+  return SongsCompanion(
+    path: Value(file.path),
+    filename: Value(path.basename(file.path)),
+    // Use the title from tags, or fallback to filename
+    title: Value(metadata.title ?? path.basenameWithoutExtension(file.path)),
+    artistId: await getByTitle(db.artists, metadata.artist!),
+    
+    
+    
+    Value(metadata.artist ?? 1),
+    albumId: Value(metadata.album ?? 1),
+    durationMS: Value(metadata.durationMs?.toInt() ?? 0),
+    // If you have a genre column
+    genre: Value(metadata.genre ?? 'Misc'),
+  );
+}
+
+
+/////// GET LIST OF MEDIA FILES DETECTED BY THE APP ON SCAN //////
+  static Future<List<Song>> scanForMedia() async {
     // set var dir = media directory
     final dir = await getMediaDir();
-    // allowed extension types
-    int counter = 0;
 
-    // Recursively list everything
-    await for (final entity in dir.list(recursive: true, followLinks: false)) {
-      if (entity is File) {
+    // first scan files from android storage if allowed
+    if (Platform.isAndroid) {
+      requestStoragePermission();
+      await MediaScanner.loadMedia(path: dir.toString());
+    }
+
+    // get all existing paths
+    final existingPaths = await (db.selectOnly(db.songs)..addColumns([db.songs.path]))
+      .map((row) => row.read(db.songs.path)).get();
+    // add paths to pathset
+    final pathSet = existingPaths.toSet();
+    // create list to hold songs
+    List<SongsCompanion> toInsert = [];
+
+    // ITERATIVELY INSERT ALL SONGS
+    await for (final entity in dir.list(recursive: true)) {
+      if (entity is File && allowedExtensions.contains(path.extension(entity.path))) {
+        // FAST IN-MEMORY CHECK
+        if (!pathSet.contains(entity.path)){
+          final companion = await fileToCompanion(entity);
+          toInsert.add(companion);
+        }
+        // BATCH INSERT IN CHUCKS SO UI UPDATES IN WAVES
+        if (toInsert.length >= 20){
+          await db.batch((b) => b.insertAll(db.songs, toInsert));
+          toInsert.clear();
+        }
         final ext = path.extension(entity.path).toLowerCase();
-        if (allowedExtensions.contains(ext) && !(await repo.songExists(entity.path))) {
-          // add the files to the database
-          await repo.addSongFromFile(entity.path);
-          counter++;
+        if (!(await songExists(entity.path))) {
+          // ADD THE FILES TO THE DATABASE
+          await addSongFromFile(entity.path);
         }
       }
     }
-    print("Media scan complete!");
-    print("Database updated by $counter songs");
-    if (await repo.songCount() is int){
-      print("New song total: ${await repo.songCount()}");
+    print("Media insertion complete!");
+    if (await getSongCount() is int){
+      print("New song total: ${await getSongCount()}");
     }
 
-    return repo.getAllSongs();
+    // RETURN ALL SONGS IN THE SONGS TABLE AFTER ALL LOCAL SONGS HAVE BEEN ADDED
+    return getAllSongs();
   }
 
-  // PLAY AN AUDIO FILE
+/////////// PLAY AN AUDIO FILE ////////////////////////////////////
   static void playMedia(Song song) async {
     _isManualSelection = true; // Tell the listener to chill
     final song_path = song.path;
-    if (song_path == null) return;
     final ext = path.extension(song_path).toLowerCase();
     if (allowedExtensions.contains(ext)) {
       try {
         await audioPlayer.setFilePath(song_path);
         await audioPlayer.play();
-        current_song = song;
+        currentSong = song;
+        print(currentSong);
       } catch (e) {
         print("Audio error: $e");
       }
@@ -150,7 +213,7 @@ class AudioManager {
     _isManualSelection = false; // Back to normal
   }
 
-  // function to handle media playback
+/////////// FUNCTION TO HANDLE MEDIA PLAYBACK ////////////////////
   void mediaPlaybackAction(String action) async {
     // use switch-case
     switch (action) {
@@ -163,13 +226,13 @@ class AudioManager {
         }
       // FORWARD
       case "forward":
-        final song = current_song;
+        final song = currentSong;
         if (song == null) return;
-        final nextSong = await repo.getSongById(song.id + 1);
+        final nextSong = await getSongById(song.id + 1);
         if (nextSong == null) {
           // reloop if that setting is turned on
           if (looping == 1) {
-            final restartSong = await repo.getSongById(1);
+            final restartSong = await getSongById(1);
             if (restartSong == null) {
               return;
             } else {
@@ -185,20 +248,19 @@ class AudioManager {
           playMedia(song);
         }
         print("FORWARD");
-        print(current_song);
       // REWIND
       case "rewind":
-        final song = current_song;
+        final song = currentSong;
         if (song == null) return;
-        final prevSong = await repo.getSongById(song.id - 1);
+        final prevSong = await getSongById(song.id - 1);
         // if at top of list
         if (prevSong == null) {
           // reloop if that setting is turned on
           if (looping == 1) {
             // go back to the last song
-            List<Song> allSongs = await repo.getAllSongs();
+            List<Song> allSongs = await getAllSongs();
             int totalSongs = allSongs.length;
-            final restartSong = await repo.getSongById(totalSongs);
+            final restartSong = await getSongById(totalSongs);
             if (restartSong != null) {
               playMedia(restartSong);
               return;

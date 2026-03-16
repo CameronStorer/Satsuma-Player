@@ -1,6 +1,5 @@
 // import required libraries
 import 'package:flutter/material.dart';
-import 'package:satsuma_player/main.dart';
 
 // define the StatefulWidget class
 class SettingsTab extends StatefulWidget {
