@@ -65,41 +65,6 @@ Future<bool> requestStoragePermission() async {
   return false;
 }
 
-//////// CONVERT FILEPATHS INTO SONG COMPANION TYPES //////////////
-Future<SongsCompanion> fileToCompanion(File file) async {
-  // read the metadata
-  final metadata = await MetadataGod.readMetadata(file: file.path);
-
-  // Helper function to handle the "Get or Create" logic inside the scan
-  Future<int> getOrCreate(String? name, TableInfo table, dynamic companion) async {
-    // ensure name is not null or blank
-    final sanitizedName = (name == null || name.isEmpty) ? 'Unknown' : name;
-    
-    // 1. Try to find the existing record
-    final existing = await getByTitle(table, sanitizedName);
-    if (existing != null) return (existing as dynamic).id;
-
-    // 2. If not found, insert and return the NEW id
-    // Assuming your insert function returns the generated int ID
-    return await insert(db.artists, ArtistsCompanion(title: Value(sanitizedName)));
-  }
-
-  // Execute the lookups
-  final artistId = await getOrCreate(metadata.artist, db.artists, (v) => ArtistsCompanion(title: v));
-  final albumId = await getOrCreate(metadata.album, db.albums, (v) => AlbumsCompanion(title: v));
-  final genreId = await getOrCreate(metadata.genre, db.genres, (v) => GenresCompanion(title: v));
-
-  return SongsCompanion(
-    path: Value(file.path),
-    filename: Value(path.basename(file.path)),
-    title: Value(metadata.title ?? path.basenameWithoutExtension(file.path)),
-    artistId: Value(artistId),
-    albumId: Value(albumId),
-    genreId: Value(genreId),
-    durationMS: Value(metadata.durationMs?.toInt() ?? 0),
-  );
-}
-
 ////////// AUDIOMANAGER CLASS /////////////////////////////////
 class AudioManager {
   // CONSTRUCTOR
@@ -118,6 +83,11 @@ class AudioManager {
   // list holding compatible file extensions
   static const allowedExtensions = ['.mp3', '.wav', '.ogg', '.m4a', '.flac', '.acc', '.vorbis', '.alac'];
   static bool _isManualSelection = false;
+  // helpful maps for efficiency
+  final Map<String, int> _artistCache = {};
+  final Map<String, int> _albumCache = {};
+  final Map<String, int> _genreCache = {};
+  static Map<int, String> artistLookup = {};
 
   // ensure that the AudioManager can initialize itself and keep track of music
   void initialize() {
@@ -136,8 +106,74 @@ class AudioManager {
     });
   }
 
+//////// CONVERT FILEPATHS INTO SONG COMPANION TYPES //////////////
+Future<SongsCompanion?> fileToCompanion(File file) async {
+  try {
+    final metadata = await MetadataGod.readMetadata(file: file.path);
+
+    // Optimized GetOrCreate with Local Caching
+    Future<int> getOrCreateCached(
+      String? name, 
+      Map<String, int> cache, 
+      TableInfo table, 
+      dynamic companion
+    ) async {
+      final sanitizedName = (name == null || name.isEmpty) ? '' : name;
+      if (sanitizedName.isEmpty) return 1; // Default "Unknown" seeded ID
+
+      // 1. Check RAM (Super Fast)
+      if (cache.containsKey(sanitizedName)) {
+        return cache[sanitizedName]!;
+      }
+
+      // 2. RAM Miss -> Hit the DB
+      int id;
+      try {
+        id = await db.into(table).insert(companion);
+      } catch (e) {
+        // Unique constraint failed, find the existing ID
+        final existing = await (db.select(table)
+              ..where((tbl) => (tbl as dynamic).title.equals(sanitizedName)))
+            .getSingle();
+        id = (existing as dynamic).id;
+      }
+
+      // 3. Save to RAM for next time
+      cache[sanitizedName] = id;
+      return id;
+    }
+
+    // Execute lookups using the cache
+    final artistId = await getOrCreateCached(metadata.artist, _artistCache, db.artists, 
+        ArtistsCompanion.insert(title: Value(metadata.artist ?? 'Unknown Artist')));
+    
+    final albumId = await getOrCreateCached(metadata.album, _albumCache, db.albums, 
+        AlbumsCompanion.insert(title: Value(metadata.album ?? 'Unknown Album')));
+    
+    final genreId = await getOrCreateCached(metadata.genre, _genreCache, db.genres, 
+        GenresCompanion.insert(title: Value(metadata.genre ?? 'Misc')));
+
+    // set artist
+    final artists = await db.select(db.artists).get();
+    artistLookup = {for (var a in artists) a.id: a.title};
+
+    return SongsCompanion(
+      path: Value(file.path),
+      filename: Value(path.basename(file.path)),
+      title: Value(metadata.title ?? path.basenameWithoutExtension(file.path)),
+      artistId: Value(artistId),
+      albumId: Value(albumId),
+      genreId: Value(genreId),
+      durationMS: Value(metadata.durationMs?.toInt() ?? 0),
+    );
+  } catch (e) {
+    print("Error reading ${file.path}: $e");
+    return null;
+  }
+}
+
 /////// GET LIST OF MEDIA FILES DETECTED BY THE APP ON SCAN //////
-  static Future<List<Song>> scanForMedia() async {
+  Future<List<Song>> scanForMedia() async {
     // set var dir = media directory
     final dir = await getMediaDir();
 
@@ -155,25 +191,37 @@ class AudioManager {
     // create list to hold songs
     List<SongsCompanion> toInsert = [];
 
-    // ITERATIVELY INSERT ALL SONGS
+    // ITERATIVELY SCAN ALL SONGS
     await for (final entity in dir.list(recursive: true)) {
-      if (entity is File && allowedExtensions.contains(path.extension(entity.path))) {
-        // FAST IN-MEMORY CHECK
-        if (!pathSet.contains(entity.path)){
+      if (entity is File && allowedExtensions.contains(path.extension(entity.path).toLowerCase())) {
+        
+        // 1. Only process if not already in our memory set (prevents duplicates in one scan)
+        if (!pathSet.contains(entity.path)) {
           final companion = await fileToCompanion(entity);
-          toInsert.add(companion);
+          
+          if (companion != null) {
+            toInsert.add(companion);
+            // Add to pathSet so we don't process the same file twice in this loop
+            pathSet.add(entity.path); 
+          }
         }
-        // BATCH INSERT IN CHUCKS SO UI UPDATES IN WAVES
-        if (toInsert.length >= 20){
-          await db.batch((b) => b.insertAll(db.songs, toInsert));
+
+        // 2. BATCH INSERT IN CHUNKS
+        if (toInsert.length >= 20) {
+          await db.batch((b) {
+            // Mode: insertOrReplace fixes the "Unique Constraint" crash!
+            b.insertAll(db.songs, toInsert, mode: InsertMode.insertOrReplace);
+          });
           toInsert.clear();
-        }
-        final ext = path.extension(entity.path).toLowerCase();
-        if (!(await songExists(entity.path))) {
-          // ADD THE FILES TO THE DATABASE
-          await addSongFromFile(entity.path);
+          print("Batch of 20 inserted.");
         }
       }
+    }
+
+    // 3. CATCH THE LEFTOVERS (If you have 7 songs left over at the end)
+    if (toInsert.isNotEmpty) {
+      await db.batch((b) => b.insertAll(db.songs, toInsert, mode: InsertMode.insertOrReplace));
+      toInsert.clear();
     }
     print("Media insertion complete!");
     print("New song total: ${await count(db.songs)}");
@@ -183,25 +231,32 @@ class AudioManager {
   }
 
 /////////// PLAY AN AUDIO FILE ////////////////////////////////////
-  static void playMedia(Song song) async {
-    _isManualSelection = true; // Tell the listener to chill
-    final song_path = song.path;
-    final ext = path.extension(song_path).toLowerCase();
+static Future<void> playMedia(Song song) async {
+  // 1. If we are already loading THIS specific song, do nothing
+  if (currentSong?.path == song.path && audioPlayer.playing) return;
+
+  try {
+    // 2. Set the state immediately so the UI reflects the change
+    currentSong = song;
+    
+    // 3. Stop any existing playback to clear the native buffer
+    await audioPlayer.stop();
+
+    final ext = path.extension(song.path).toLowerCase();
     if (allowedExtensions.contains(ext)) {
-      try {
-        await audioPlayer.setFilePath(song_path);
-        await audioPlayer.play();
-        currentSong = song;
-        print(currentSong);
-      } catch (e) {
-        print("Audio error: $e");
-      }
-    } else {
-      print("Unsupported file type: $ext");
+      // 4. Load the file. 
+      // Preload: false can sometimes help on Windows if the UI is hanging
+      await audioPlayer.setFilePath(song.path, preload: true);
+      
+      // 5. Play!
+      await audioPlayer.play();
     }
-    print(_isManualSelection);
-    _isManualSelection = false; // Back to normal
+  } catch (e) {
+    print("Audio error: $e");
   }
+  // Note: I removed the _isManualSelection toggle here to see if the 
+  // "Every other" pattern stops. 
+}
 
 /////////// FUNCTION TO HANDLE MEDIA PLAYBACK ////////////////////
   void mediaPlaybackAction(String action) async {

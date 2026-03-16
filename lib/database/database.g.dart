@@ -1065,14 +1065,6 @@ class $PlaylistsTable extends Playlists
   late final GeneratedColumn<String> title = GeneratedColumn<String>(
       'title', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
-  static const VerificationMeta _songCountMeta =
-      const VerificationMeta('songCount');
-  @override
-  late final GeneratedColumn<int> songCount = GeneratedColumn<int>(
-      'song_count', aliasedName, false,
-      type: DriftSqlType.int,
-      requiredDuringInsert: false,
-      defaultValue: const Constant(0));
   static const VerificationMeta _isPinnedMeta =
       const VerificationMeta('isPinned');
   @override
@@ -1092,8 +1084,7 @@ class $PlaylistsTable extends Playlists
       requiredDuringInsert: false,
       defaultValue: currentDateAndTime);
   @override
-  List<GeneratedColumn> get $columns =>
-      [id, title, songCount, isPinned, creationDate];
+  List<GeneratedColumn> get $columns => [id, title, isPinned, creationDate];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -1112,10 +1103,6 @@ class $PlaylistsTable extends Playlists
           _titleMeta, title.isAcceptableOrUnknown(data['title']!, _titleMeta));
     } else if (isInserting) {
       context.missing(_titleMeta);
-    }
-    if (data.containsKey('song_count')) {
-      context.handle(_songCountMeta,
-          songCount.isAcceptableOrUnknown(data['song_count']!, _songCountMeta));
     }
     if (data.containsKey('is_pinned')) {
       context.handle(_isPinnedMeta,
@@ -1140,8 +1127,6 @@ class $PlaylistsTable extends Playlists
           .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
       title: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}title'])!,
-      songCount: attachedDatabase.typeMapping
-          .read(DriftSqlType.int, data['${effectivePrefix}song_count'])!,
       isPinned: attachedDatabase.typeMapping
           .read(DriftSqlType.bool, data['${effectivePrefix}is_pinned'])!,
       creationDate: attachedDatabase.typeMapping.read(
@@ -1158,13 +1143,11 @@ class $PlaylistsTable extends Playlists
 class Playlist extends DataClass implements Insertable<Playlist> {
   final int id;
   final String title;
-  final int songCount;
   final bool isPinned;
   final DateTime creationDate;
   const Playlist(
       {required this.id,
       required this.title,
-      required this.songCount,
       required this.isPinned,
       required this.creationDate});
   @override
@@ -1172,7 +1155,6 @@ class Playlist extends DataClass implements Insertable<Playlist> {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
     map['title'] = Variable<String>(title);
-    map['song_count'] = Variable<int>(songCount);
     map['is_pinned'] = Variable<bool>(isPinned);
     map['creation_date'] = Variable<DateTime>(creationDate);
     return map;
@@ -1182,7 +1164,6 @@ class Playlist extends DataClass implements Insertable<Playlist> {
     return PlaylistsCompanion(
       id: Value(id),
       title: Value(title),
-      songCount: Value(songCount),
       isPinned: Value(isPinned),
       creationDate: Value(creationDate),
     );
@@ -1194,7 +1175,6 @@ class Playlist extends DataClass implements Insertable<Playlist> {
     return Playlist(
       id: serializer.fromJson<int>(json['id']),
       title: serializer.fromJson<String>(json['title']),
-      songCount: serializer.fromJson<int>(json['songCount']),
       isPinned: serializer.fromJson<bool>(json['isPinned']),
       creationDate: serializer.fromJson<DateTime>(json['creationDate']),
     );
@@ -1205,22 +1185,16 @@ class Playlist extends DataClass implements Insertable<Playlist> {
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
       'title': serializer.toJson<String>(title),
-      'songCount': serializer.toJson<int>(songCount),
       'isPinned': serializer.toJson<bool>(isPinned),
       'creationDate': serializer.toJson<DateTime>(creationDate),
     };
   }
 
   Playlist copyWith(
-          {int? id,
-          String? title,
-          int? songCount,
-          bool? isPinned,
-          DateTime? creationDate}) =>
+          {int? id, String? title, bool? isPinned, DateTime? creationDate}) =>
       Playlist(
         id: id ?? this.id,
         title: title ?? this.title,
-        songCount: songCount ?? this.songCount,
         isPinned: isPinned ?? this.isPinned,
         creationDate: creationDate ?? this.creationDate,
       );
@@ -1228,7 +1202,6 @@ class Playlist extends DataClass implements Insertable<Playlist> {
     return Playlist(
       id: data.id.present ? data.id.value : this.id,
       title: data.title.present ? data.title.value : this.title,
-      songCount: data.songCount.present ? data.songCount.value : this.songCount,
       isPinned: data.isPinned.present ? data.isPinned.value : this.isPinned,
       creationDate: data.creationDate.present
           ? data.creationDate.value
@@ -1241,7 +1214,6 @@ class Playlist extends DataClass implements Insertable<Playlist> {
     return (StringBuffer('Playlist(')
           ..write('id: $id, ')
           ..write('title: $title, ')
-          ..write('songCount: $songCount, ')
           ..write('isPinned: $isPinned, ')
           ..write('creationDate: $creationDate')
           ..write(')'))
@@ -1249,14 +1221,13 @@ class Playlist extends DataClass implements Insertable<Playlist> {
   }
 
   @override
-  int get hashCode => Object.hash(id, title, songCount, isPinned, creationDate);
+  int get hashCode => Object.hash(id, title, isPinned, creationDate);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is Playlist &&
           other.id == this.id &&
           other.title == this.title &&
-          other.songCount == this.songCount &&
           other.isPinned == this.isPinned &&
           other.creationDate == this.creationDate);
 }
@@ -1264,34 +1235,29 @@ class Playlist extends DataClass implements Insertable<Playlist> {
 class PlaylistsCompanion extends UpdateCompanion<Playlist> {
   final Value<int> id;
   final Value<String> title;
-  final Value<int> songCount;
   final Value<bool> isPinned;
   final Value<DateTime> creationDate;
   const PlaylistsCompanion({
     this.id = const Value.absent(),
     this.title = const Value.absent(),
-    this.songCount = const Value.absent(),
     this.isPinned = const Value.absent(),
     this.creationDate = const Value.absent(),
   });
   PlaylistsCompanion.insert({
     this.id = const Value.absent(),
     required String title,
-    this.songCount = const Value.absent(),
     this.isPinned = const Value.absent(),
     this.creationDate = const Value.absent(),
   }) : title = Value(title);
   static Insertable<Playlist> custom({
     Expression<int>? id,
     Expression<String>? title,
-    Expression<int>? songCount,
     Expression<bool>? isPinned,
     Expression<DateTime>? creationDate,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (title != null) 'title': title,
-      if (songCount != null) 'song_count': songCount,
       if (isPinned != null) 'is_pinned': isPinned,
       if (creationDate != null) 'creation_date': creationDate,
     });
@@ -1300,13 +1266,11 @@ class PlaylistsCompanion extends UpdateCompanion<Playlist> {
   PlaylistsCompanion copyWith(
       {Value<int>? id,
       Value<String>? title,
-      Value<int>? songCount,
       Value<bool>? isPinned,
       Value<DateTime>? creationDate}) {
     return PlaylistsCompanion(
       id: id ?? this.id,
       title: title ?? this.title,
-      songCount: songCount ?? this.songCount,
       isPinned: isPinned ?? this.isPinned,
       creationDate: creationDate ?? this.creationDate,
     );
@@ -1320,9 +1284,6 @@ class PlaylistsCompanion extends UpdateCompanion<Playlist> {
     }
     if (title.present) {
       map['title'] = Variable<String>(title.value);
-    }
-    if (songCount.present) {
-      map['song_count'] = Variable<int>(songCount.value);
     }
     if (isPinned.present) {
       map['is_pinned'] = Variable<bool>(isPinned.value);
@@ -1338,7 +1299,6 @@ class PlaylistsCompanion extends UpdateCompanion<Playlist> {
     return (StringBuffer('PlaylistsCompanion(')
           ..write('id: $id, ')
           ..write('title: $title, ')
-          ..write('songCount: $songCount, ')
           ..write('isPinned: $isPinned, ')
           ..write('creationDate: $creationDate')
           ..write(')'))
@@ -2788,14 +2748,12 @@ typedef $$SongsTableProcessedTableManager = ProcessedTableManager<
 typedef $$PlaylistsTableCreateCompanionBuilder = PlaylistsCompanion Function({
   Value<int> id,
   required String title,
-  Value<int> songCount,
   Value<bool> isPinned,
   Value<DateTime> creationDate,
 });
 typedef $$PlaylistsTableUpdateCompanionBuilder = PlaylistsCompanion Function({
   Value<int> id,
   Value<String> title,
-  Value<int> songCount,
   Value<bool> isPinned,
   Value<DateTime> creationDate,
 });
@@ -2834,9 +2792,6 @@ class $$PlaylistsTableFilterComposer
 
   ColumnFilters<String> get title => $composableBuilder(
       column: $table.title, builder: (column) => ColumnFilters(column));
-
-  ColumnFilters<int> get songCount => $composableBuilder(
-      column: $table.songCount, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<bool> get isPinned => $composableBuilder(
       column: $table.isPinned, builder: (column) => ColumnFilters(column));
@@ -2881,9 +2836,6 @@ class $$PlaylistsTableOrderingComposer
   ColumnOrderings<String> get title => $composableBuilder(
       column: $table.title, builder: (column) => ColumnOrderings(column));
 
-  ColumnOrderings<int> get songCount => $composableBuilder(
-      column: $table.songCount, builder: (column) => ColumnOrderings(column));
-
   ColumnOrderings<bool> get isPinned => $composableBuilder(
       column: $table.isPinned, builder: (column) => ColumnOrderings(column));
 
@@ -2906,9 +2858,6 @@ class $$PlaylistsTableAnnotationComposer
 
   GeneratedColumn<String> get title =>
       $composableBuilder(column: $table.title, builder: (column) => column);
-
-  GeneratedColumn<int> get songCount =>
-      $composableBuilder(column: $table.songCount, builder: (column) => column);
 
   GeneratedColumn<bool> get isPinned =>
       $composableBuilder(column: $table.isPinned, builder: (column) => column);
@@ -2963,28 +2912,24 @@ class $$PlaylistsTableTableManager extends RootTableManager<
           updateCompanionCallback: ({
             Value<int> id = const Value.absent(),
             Value<String> title = const Value.absent(),
-            Value<int> songCount = const Value.absent(),
             Value<bool> isPinned = const Value.absent(),
             Value<DateTime> creationDate = const Value.absent(),
           }) =>
               PlaylistsCompanion(
             id: id,
             title: title,
-            songCount: songCount,
             isPinned: isPinned,
             creationDate: creationDate,
           ),
           createCompanionCallback: ({
             Value<int> id = const Value.absent(),
             required String title,
-            Value<int> songCount = const Value.absent(),
             Value<bool> isPinned = const Value.absent(),
             Value<DateTime> creationDate = const Value.absent(),
           }) =>
               PlaylistsCompanion.insert(
             id: id,
             title: title,
-            songCount: songCount,
             isPinned: isPinned,
             creationDate: creationDate,
           ),

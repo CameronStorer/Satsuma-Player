@@ -34,7 +34,6 @@ class Songs extends Table {
 class Playlists extends Table {
   IntColumn get id => integer().autoIncrement()(); // PK
   TextColumn get title => text()();
-  IntColumn get songCount => integer().withDefault(const Constant(0))();
   BoolColumn get isPinned => boolean().withDefault(const Constant(false))(); 
   DateTimeColumn get creationDate => dateTime().withDefault(currentDateAndTime)();
 }
@@ -90,22 +89,11 @@ MigrationStrategy get migration {
       // Turn on Foreign Key constraints (important for SQLite!)
       await customStatement('PRAGMA foreign_keys = ON');
 
-      // SEED THE 'UNKNOWN' ARTIST
-      // WE MANUALLY SPECIFY ID 1 SO OUR DEFAULTS/TRIGGERS ALWAYS KNOW WHERE TO LOOK
-      await into(artists).insertOnConflictUpdate(
-        ArtistsCompanion.insert(
-          id: const Value(1), 
-          title: const Value('Unknown Artist'),
-        ),
-      );
-
-      // SEED THE 'UNKNOWN' GENRE
-      await into(genres).insertOnConflictUpdate(
-        GenresCompanion.insert(
-          id: const Value(1),
-          title: const Value('Misc'),
-        ),
-      );
+      // SEED THE 'UNKNOWN'
+      // use OR IGNORE so it only runs the very first time the app is opened
+        await customStatement('INSERT OR IGNORE INTO artists (id, title) VALUES (1, \'Unknown Artist\')');
+        await customStatement('INSERT OR IGNORE INTO genres (id, title) VALUES (1, \'Misc\')');
+        await customStatement('INSERT OR IGNORE INTO albums (id, title) VALUES (1, \'Unknown Album\')');
     },
   );
 }
@@ -117,7 +105,7 @@ MigrationStrategy get migration {
 LazyDatabase _openConnection() {
   return LazyDatabase(() async {
     // This creates a local file in your project folder
-    final file = File('db.sqlite'); 
+    final file = File('db.sqlite1'); 
     return NativeDatabase(file);
   });
 }

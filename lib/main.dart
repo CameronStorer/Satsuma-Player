@@ -5,9 +5,20 @@ import 'tabs/songs_tab.dart';
 import 'tabs/download_tab.dart';
 import 'tabs/settings_tab.dart';
 import 'package:satsuma_player/app_logic/media_handler.dart';
+import 'package:metadata_god/metadata_god.dart';   // for finding song meta data
 
 //// MAIN FUNC ///////////////////////////////////////////////////////////
-void main() {
+Future<void> main() async {
+  // required whenever main is async and uses plugins
+  WidgetsFlutterBinding.ensureInitialized();
+
+  try {
+    MetadataGod.initialize();
+    print("MetadataGod initialized successfully");
+  } catch (e) {
+    print("Failed to initialize MetadataGod: $e");
+  }
+
   runApp(const SatsumaPlayer());
 }
 

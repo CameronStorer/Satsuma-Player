@@ -12,44 +12,34 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # custom imports
-  # FILE PATH IMPORTS
-  path: ^1.9.0                # library for handling file paths
-  path_provider: any
-  permission_handler: any     # permission handler for ios and android
-  media_scanner: any          # library for scanning in local music
+  # Core Utilities
+  path: ^1.9.0
+  path_provider: ^2.1.2
+  permission_handler: ^11.3.1
+  
+  # Database (Local Storage)
+  drift: ^2.16.0
+  drift_flutter: ^0.2.0
+  sqlite3: ^2.1.0
+  sqlite3_flutter_libs: ^0.5.21 # Vital for Windows support
 
-  # DATABASE RELATED IMPORTS
-  drift: ^2.16.0              # dart database library
-  sqlite3: ^2.1.0             # necessary SQL backend
-  drift_flutter: any          # drift db communication with flutter?
-
-  # AUDIO PLAYING RELATED IMPORTS
-  just_audio: any
-  just_audio_windows: any
+  # Media Handling
+  just_audio: ^0.9.36
+  just_audio_windows: ^0.2.1
+  metadata_god: ^0.5.0
   on_audio_query: ^2.9.0
-  metadata_god: any
+  media_scanner: ^2.2.0
 
-  # SERVER SYNC / DOWNLOAD IMPORTS
-  youtube_explode_dart: any
-  # video_player: any
-  # flutter_launcher_icons: ^0.14.4
-  # firebase_core: ^4.2.1
-  # firebase_auth: ^6.1.2
-  # cloud_firestore: ^6.1.0
-
-  # IOS-STYLE CUPTERTINO ICONS
+  # Extras
+  youtube_explode_dart: ^2.2.2
   cupertino_icons: ^1.0.8
 
-# dev dependencies
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_launcher_icons: any
-  drift_dev: any
-  build_runner: any
-  # The "flutter_lints" package below contains a set of recommended lints
-  flutter_lints: ^6.0.0
+  drift_dev: ^2.16.0  # Keep in sync with drift version
+  build_runner: ^2.4.8
+  flutter_lints: ^5.0.0 # Standard for 2026 projects
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

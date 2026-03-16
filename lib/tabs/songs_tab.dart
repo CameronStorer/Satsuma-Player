@@ -107,7 +107,7 @@ class _SongsTabState extends State<SongsTab> {
                     return ListTile(
                       title: Text(song.title),
                       // subtitle: Text(song.artist ?? 'Unknown'),
-                      subtitle: Text('Unknown'),
+                      subtitle: Text(AudioManager.artistLookup[song.artistId] ?? 'Unknown Artist'),
                       onTap: () => AudioManager.playMedia(song),
                     );
                   },
