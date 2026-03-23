@@ -1,96 +1,81 @@
 name: satsuma_player
-description: "A modernized music playing app."
+description: "A modernized multi-platform music player app."
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.10.0
+  sdk: '>=3.0.0 <4.0.0'
 
+# all application dependencies
 dependencies:
   flutter:
     sdk: flutter
 
-  # custom imports
-  path: any
-  path_provider: any
-  drift: any
-  drift_flutter: any
-  on_audio_query: ^2.9.0
-  just_audio: any
-  just_audio_windows: any
-  media_scanner: any
-  permission_handler: any
-  youtube_explode_dart: any
-  # video_player: any
-  # flutter_launcher_icons: ^0.14.4
-  # firebase_core: ^4.2.1
-  # firebase_auth: ^6.1.2
-  # cloud_firestore: ^6.1.0
+  # Core Utilities
+  path: ^1.9.0
+  path_provider: ^2.1.2
+  permission_handler: ^11.3.1
+  
+  # Database (Local Storage)
+  drift: ^2.16.0
+  drift_flutter: ^0.2.0
+  sqlite3: ^2.1.0
+  sqlite3_flutter_libs: ^0.5.21 # Vital for Windows support
 
-  # The following adds the Cupertino Icons font to your application.
-  # Use with the CupertinoIcons class for iOS style icons.
+  # Media Handling
+  just_audio: ^0.9.36
+  just_audio_windows: ^0.2.1
+  metadata_god: ^0.5.0
+  on_audio_query: ^2.9.0
+  media_scanner: ^2.2.0
+
+  # Extras
+  youtube_explode_dart: ^2.2.2
   cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  drift_dev: ^2.16.0  # Keep in sync with drift version
+  build_runner: ^2.4.8
+  flutter_lints: ^5.0.0 # Standard for 2026 projects
+
+# For information on the generic Dart part of this file, see the
+# following page: https://dart.dev/tools/pub/pubspec
 
 # program icon config
 flutter_launcher_icons:
   # REQUIRED: The path to your icon file
   image_path: "assets/images/mobile_icon.png"
-  
   # OPTIONAL: Set to true if you want the icon applied to iOS
   ios: true
-  
   # OPTIONAL: Set to true if you want the icon applied to Android
   android: true 
-
   # COMMAND: flutter pub run flutter_launcher_icons:main
-
   # ios doesn't like transparent bg's
   # remove_alpha_ios: true
-  
   # OPTIONAL (Android Only): Changes the adaptive icon foreground/background.
   # This is needed for modern Android devices.
   adaptive_icon_background: "#FFFFFF" # Use a color hex code
   adaptive_icon_foreground: "assets/images/mobile_icon.png" 
   
-  # OPTIONAL: If you want to replace the default web icon
   # web: 
   #   generate: true
   #   image_path: "assets/images/app_icon.png"
     # background_color: "#hexcode" # Optional
 
-dev_dependencies:
-  flutter_test:
-    sdk: flutter
-
-  flutter_launcher_icons: any
-  drift_dev: any
-  build_runner: any
-
-  # The "flutter_lints" package below contains a set of recommended lints to
-  # encourage good coding practices. The lint set provided by the package is
-  # activated in the `analysis_options.yaml` file located at the root of your
-  # package. See that file for information about deactivating specific lint
-  # rules and activating additional ones.
-  flutter_lints: ^6.0.0
-
-# For information on the generic Dart part of this file, see the
-# following page: https://dart.dev/tools/pub/pubspec
-
-
-
 # The following section is specific to Flutter packages.
 flutter:
 
-  # The following line ensures that the Material Icons font is
-  # included with your application, so that you can use the icons in
-  # the material Icons class.
+  # The following line ensures that the Material Icons font is included
   uses-material-design: true
 
   # To add assets to your application, add an assets section, like this:
   assets:
       # playlist covers
       - assets/covers/
+      - branding/
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
 

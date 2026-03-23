@@ -1,33 +1,46 @@
-// import appropriate libraries
+//////////  IMPORTS /////////////////////////////////////////////////////
 import 'package:flutter/material.dart';
 import 'tabs/playlists_tab.dart';
 import 'tabs/songs_tab.dart';
-import 'tabs/download_tab.dart';
 import 'tabs/settings_tab.dart';
+import 'tabs/download_tab.dart';
 import 'package:satsuma_player/app_logic/media_handler.dart';
+import 'package:metadata_god/metadata_god.dart';   // for finding song meta data
 
-// main func
-void main() {
+//// MAIN FUNC ///////////////////////////////////////////////////////////
+Future<void> main() async {
+  // required whenever main is async and uses plugins
+  WidgetsFlutterBinding.ensureInitialized();
+
+  try {
+    MetadataGod.initialize();
+    print("MetadataGod initialized successfully");
+  } catch (e) {
+    print("Failed to initialize MetadataGod: $e");
+  }
+
   runApp(const SatsumaPlayer());
 }
 
-// app class
+
+///////// BASE APP CLASS /////////////////////////////////////////////////
+// APP CLASS
 class SatsumaPlayer extends StatelessWidget {
   // constructor
   const SatsumaPlayer({super.key});
 
-  // build UI
+  // BUILD UI
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Satsuma Player',
 
-      // default theme (light)
+      // LIGHT THEME (Default)
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue, brightness: Brightness.light),
         useMaterial3: true,
       ),
-      // dark theme
+      // DARK THEME
       darkTheme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueGrey, brightness: Brightness.dark),
         useMaterial3: true,
@@ -38,18 +51,21 @@ class SatsumaPlayer extends StatelessWidget {
   }
 }
 
-// tab controller class
+
+//////// TAB INSERTION (FOR EACH APP TAB) ////////////////////////////////
+// TAB CONTROLLER CLASS
 class CustomTabController extends StatelessWidget {
   //constructor
   CustomTabController({super.key});
 
-  // Audio player object
+  // INITIALIZE AUDIO MANAGER FOR AUDIO PLAYLING
   final AudioManager aM = AudioManager();
 
-  // build UI
+  // BUILD THE UI
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
+/////////////// CREATE THE APP BAR HOLDING ALL TAB ICONS ////////////////////
       length: 4,
       child: Scaffold(
         appBar: AppBar(
@@ -57,6 +73,7 @@ class CustomTabController extends StatelessWidget {
           backgroundColor: const Color.fromARGB(255, 84, 6, 228),
           bottom: const TabBar(
             tabs: [
+              // PLAYLISTS, SONGS, SYNC, SETTINGS
               Tab(text: 'Playlists', icon: Icon(Icons.list)),
               Tab(text: 'Songs', icon: Icon(Icons.music_note)),
               Tab(text: 'Download', icon: Icon(Icons.download)),
@@ -65,16 +82,17 @@ class CustomTabController extends StatelessWidget {
           ),
         ),
 
-        // Now display the contents of each tab
+///////////// DISPLAY THE CONTENTS OF EACH TAB /////////////////////////////
         body: const TabBarView(children: [PlaylistsTab(), SongsTab(), DownloadTab(), SettingsTab()]),
 
-        // bottom button bar
+///////////// DEFINE THE BOTTOM NAVIGATION BAR !!! ////////////////////////
         bottomNavigationBar: Container(
           color: Color.fromARGB(255, 6, 95, 228),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             mainAxisSize: MainAxisSize.max,
             children: <Widget>[
+              //////// SHUFFLE TOGGLE BUTTON
               IconButton(
                 onPressed: () {
                   aM.mediaPlaybackAction("shuffle");
@@ -84,6 +102,7 @@ class CustomTabController extends StatelessWidget {
                 padding: EdgeInsets.all(25),
                 constraints: const BoxConstraints(),
               ),
+              //////// REWIND BUTTON
               IconButton(
                 onPressed: () {
                   aM.mediaPlaybackAction("rewind");
@@ -93,6 +112,7 @@ class CustomTabController extends StatelessWidget {
                 padding: EdgeInsets.all(20),
                 constraints: const BoxConstraints(),
               ),
+              //////// PAUSE BUTTON
               IconButton(
                 onPressed: () {
                   aM.mediaPlaybackAction("pause");
@@ -102,6 +122,7 @@ class CustomTabController extends StatelessWidget {
                 padding: EdgeInsets.all(20),
                 constraints: const BoxConstraints(),
               ),
+              //////// FORWARD BUTTON
               IconButton(
                 onPressed: () {
                   aM.mediaPlaybackAction("forward");
@@ -111,6 +132,7 @@ class CustomTabController extends StatelessWidget {
                 padding: EdgeInsets.all(20),
                 constraints: const BoxConstraints(),
               ),
+              //////// LOOP TOGGLE BUTTON
               IconButton(
                 onPressed: () {
                   aM.mediaPlaybackAction("loop");

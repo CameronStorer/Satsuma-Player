@@ -1,32 +1,40 @@
 // import required libraries
 import 'package:flutter/material.dart';
-import 'package:satsuma_player/database/app_database.dart';
 import '../app_logic/media_handler.dart';
 import 'package:path/path.dart' as path; // file path recognition
-import 'dart:io'; // input/output
-import '../database/repositories/song_repository.dart';
+// DATABASE IMPORTS
+import 'package:satsuma_player/database/database.dart';
+import 'package:satsuma_player/database/brains.dart';
 
-// define the StatefulWidget class
+// DEFINE THE STATEFULWIDGET CLASS
 class SongsTab extends StatefulWidget {
   // constructor
   const SongsTab({super.key});
-
   @override
   State<SongsTab> createState() => _SongsTabState();
 }
-
-// define the State class
+// DEFINE THE STATE CLASS
 class _SongsTabState extends State<SongsTab> {
-  // manage state variables here
-
-  // build the UI for this tab content
+  // DEFINE STREAM VARIABLE
+  late Stream<List<Song>> _songStream;
+  // INITIALIZE STREAM WHEN TAB CREATED (FOR STABLE CONNECTION)
+  @override
+  void initState(){
+    super.initState();
+    _songStream = watchAllSongs();
+  }
+  // MANAGE STATE VARIABLES HERE
+  // BUILD THE UI FOR THIS TAB CONTENT
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
       length: 3,
-      // scaffold
+      // SCAFFOLD
       child: Scaffold(
+        extendBodyBehindAppBar: true,
         appBar: AppBar(
+          backgroundColor: Color.lerp(Color.fromARGB(155, 0, 0, 0),const Color.fromARGB(255, 49, 3, 158),0.15),
+          elevation:0,
           toolbarHeight: 0,
           bottom: PreferredSize(
             preferredSize: const Size.fromHeight(70),
@@ -35,24 +43,20 @@ class _SongsTabState extends State<SongsTab> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: <Widget>[
-                    // title
+////////////////////////// TITLE ////////////////////////////////////////////
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Padding(
                           padding: EdgeInsets.all(16.0),
-                          child: Text('Your Songs', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                          child: Text('Your Songs', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),),
                         ),
                       ],
                     ),
-                    // buttons
+/////////////////////// NAVBAR BUTTONS ///////////////////////////////////////
                     Row(
                       // padding: const EdgeInsets.symmetric(horizontal: 2),
                       children: [
-                        TextButton(
-                          onPressed: () {AudioManager.scanForMedia();},
-                          child: Column(children: [Icon(Icons.scanner), Text('Rescan')]),
-                        ),
                         TextButton(
                           onPressed: () {},
                           child: Column(children: [Icon(Icons.search), Text('Search')]),
@@ -69,37 +73,67 @@ class _SongsTabState extends State<SongsTab> {
             ),
           ),
         ),
+//////////////////// TAB PAGE CONTENTS ////////////////////////////////////////
         body: Expanded(
           child: Scaffold(
-            body: FutureBuilder<List<Song>>(
-              future: AudioManager.scanForMedia(),
-              builder: (context, snapshot) {
+            body: StreamBuilder<List<Song>>(
+              // The Source: database stream
+              stream: _songStream,
+
+              builder: (context, snapshot){
+                // Handle the 'loading' state
+                // on first load, stream is empty for a few seconds
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
-                if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const Center(child: Text("No media found."));
+
+                // Handle potential errors
+                if (snapshot.hasError){
+                  return Center(child: Text('Error: ${snapshot.error}'));
                 }
 
-                final songs = snapshot.data!;
-
+                // Handle the 'empty' state
+                final songList = snapshot.data ?? [];
+                if (songList.isEmpty) {
+                  return const Center(child: Text('No songs found. Start scanning!'));
+                }
+                // the 'success' UI
                 return ListView.builder(
-                  itemCount: songs.length,
+                  itemCount: songList.length,
                   itemBuilder: (context, index) {
-                    final song = songs[index];
-                    // final filename = file.path.split('/').last;
-
+                    final song = songList[index];
                     return ListTile(
-                      leading: const Icon(Icons.music_note),
-                      title: Text(path.basename(song.path)),
-                      onTap: () {
-                        AudioManager.playMedia(song);
-                      },
+                      leading: 
+                        Image.asset(AudioManager.coverLookup[song.coverId] ?? 'branding/neon.png',
+                        width: 50,
+                        height: 50,
+                        fit: BoxFit.cover,
+                      ),
+                      title: Text(song.title),
+                      subtitle: Text(AudioManager.artistLookup[song.artistId] ?? 'Unknown Artist'),
+                      onTap: () => AudioManager.playMedia(song),
                     );
                   },
                 );
+                // return ListView.builder(
+                //   itemCount: songList.length,
+                //   itemBuilder: (context, index) {
+                //     final song = songList[index];
+                //     return 
+                //     // Row( children: [
+                //         // Image(image: AssetImage(AudioManager.coverLookup[song.coverId] ?? 'brand\\color-darkbg.png'),),
+                //         ListTile(
+                //           title: Text(song.title),
+                //           // subtitle: Text(song.artist ?? 'Unknown'),
+                //           subtitle: Text(AudioManager.artistLookup[song.artistId] ?? 'Unknown Artist'),
+                //           onTap: () => AudioManager.playMedia(song),
+                //       //   )
+                //       // ]
+                //     );
+                //   },
+                // );
               },
-            ),
+            )
           ),
         ),
       ),
