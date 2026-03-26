@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.satsuma_player"
+    namespace = "com.cameronstorer.satsuma_player"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -16,7 +16,7 @@ android {
     }
 
     kotlinOptions {
-        jvmTarget = '17'
+        jvmTarget = "17"
     }
 
     defaultConfig {
